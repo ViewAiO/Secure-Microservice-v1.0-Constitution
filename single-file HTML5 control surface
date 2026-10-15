@@ -1,0 +1,101 @@
+**Single-file HTML5 control surface (`index.html`) using the Armybox toolkit can control fleets across a private network while maintaining full visual control over secure personal data [1, 2].** 
+
+The architecture achieves this by decoupling the unprivileged visual user interface (Intent) from low-level host infrastructure (Execution) [1, 3].
+
+---
+
+### How Private Network Fleet Control Works
+
+1. **The Static Multi-Envelope Interface**  
+   Your entire management workspace lives in a single, self-contained `index.html` document with zero build steps or external dependencies [1, 2]. It operates across four integrated envelopes:
+   * **Dashboard (Application):** Provides real-time visual telemetry and interactive fleet management [2].
+   * **Contract (Contract):** Houses JSON configuration editors that format exact Firecracker API specifications [1, 2].
+   * **State (State):** Manages status indicators and event logs [2].
+   * **Manual (Documentation):** Embedded source blueprints for emergency recovery or inspection [2].
+
+2. **The 3-Function Elevation Pattern**  
+   In offline simulation mode, the UI persists mock fleet status to browser `localStorage` [1, 4]. To transition to controlling physical nodes across a private network, **you simply replace three local storage JavaScript functions with asynchronous `fetch()` API calls** (e.g., `fetch('/api/vm/start')`) targeting the host-side Rust backend [1, 4, 5].
+
+3. **Zero-Trust Private Network Boundaries**  
+   The host Rust backend receives JSON commands from the frontend and configures network and process isolation without using shell interpreters [6, 7]:
+   * **Programmatic Invocation:** System operations use direct system calls (`std::process::Command`), eliminating shell tokenization and command-injection vulnerabilities [6, 7].
+   * **TAP Provisioning:** Isolated virtual TAP devices (`tap0`) are dynamically generated on the host [8, 9].
+   * **Fail-Closed Networking:** Default-DROP `iptables` rules, anti-spoofing filters, and restricted NAT mapping ensure microVM traffic cannot traverse unauthorized routes [8-10].
+
+---
+
+### How to Boot a Secure, Full Visual Control Workload
+
+To deploy a new microVM that manages and displays personal visual data within a minimal, memory-safe footprint, follow this process:
+
+#### 1. Define the Identity & Visual Component (Frontend)
+Your personal identity and security posture are visually broadcast via lightweight tactical CSS components embedded in the HTML [11, 12]. 
+
+```html
+<div class="terminal-window glow-emerald">
+  <div class="bg-tactical-900" style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--t-border);">
+    <span class="font-mono text-xs uppercase tracking-widest text-slate-400">PERSONAL IDENTITY & ATTESTATION</span>
+  </div>
+  <div style="padding: 1rem;">
+    <div style="margin-bottom: 0.75rem;">
+      <span class="text-slate-400 text-xs uppercase block">ENVELOPE TYPE:</span>
+      <span style="color: var(--cyan-400);">FROM_SCRATCH (32MB RAM)</span>
+    </div>
+    <div>
+      <span class="text-slate-400 text-xs uppercase block">PUBLIC KEY HASH (ED25519):</span>
+      <span class="text-xs" style="color: #94a3b8; word-break: break-all;">sha256:7c92...4f11</span>
+    </div>
+  </div>
+</div>
+```
+*This design uses pure CSS variables and HTML to display your cryptographic key fingerprint and memory ceiling with zero bloat or dynamic framework vulnerabilities [12, 13].*
+
+#### 2. Formulate the Secure Boot Contract (Contract Envelope)
+In the interactive JSON editor inside `index.html`, declare the hardware and boot parameters targeting a FROM SCRATCH environment [12, 14, 15]:
+
+```json
+{
+  "machine-config": {
+    "vcpu_count": 1,
+    "mem_size_mib": 32,
+    "smt": false
+  },
+  "boot-source": {
+    "kernel_image_path": "vmlinux-uncompressed",
+    "boot_args": "console=ttyS0 reboot=k panic=1 pci=off init=/bin/init quiet"
+  },
+  "drives": [
+    {
+      "drive_id": "rootfs",
+      "path_on_host": "rootfs.ext4",
+      "is_root_device": true,
+      "is_read_only": true
+    }
+  ]
+}
+```
+
+#### 3. Build a FROM SCRATCH Root Filesystem
+The guest workload runs with **zero operating system bloat**—no Ubuntu, Alpine, systemd, or glibc [14]. An empty 32MB ext4 image is created on the host, containing only a statically compiled musl Rust binary set as PID 1 (`/bin/init`) [14, 16]:
+
+```bash
+# 1. Create a blank 32MB filesystem image
+dd if=/dev/zero of=rootfs.ext4 bs=1M count=32
+mkfs.ext4 rootfs.ext4
+
+# 2. Mount and build bare directory structure
+mkdir -p /mnt/rootfs/{bin,dev,proc,sys,etc,tmp}
+
+# 3. Copy your static musl Rust binary directly as PID 1
+cp armybox-app /mnt/rootfs/bin/init
+umount /mnt/rootfs
+```
+
+#### 4. Execute Hypervisor Instantiation
+1. **Human-in-the-Loop Check:** The operator validates the JSON schema directly in the browser editor [17, 18].
+2. **Dispatch:** Clicking "Deploy" issues a `POST` request (`fetch('/api/vm/start')`) containing the JSON contract to the host Rust backend [18, 19].
+3. **Execution:** The Rust backend isolates the execution within the Firecracker Jailer sandbox, binds the virtual network interfaces, and maps the uncompressed kernel (`vmlinux-uncompressed`) directly into guest memory [19, 20]. 
+4. **Boot Completion:** Because the kernel is uncompressed and the userland binary is the sole init process, the VM boots in **sub-5 milliseconds** with zero background daemons consuming RAM [16, 20, 21].
+
+---
+
